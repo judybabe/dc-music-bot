@@ -39,7 +39,6 @@ ydl_opts = {
     'cookiefile': 'cookies.txt'
 }
 
-# 指令：加入語音
 @bot.command()
 async def join(ctx):
     if ctx.author.voice:
@@ -48,7 +47,6 @@ async def join(ctx):
     else:
         await ctx.send("你必須先加入語音頻道！")
 
-# 指令：離開語音
 @bot.command()
 async def leave(ctx):
     if ctx.voice_client:
@@ -56,50 +54,42 @@ async def leave(ctx):
     else:
         await ctx.send("我不在語音頻道內。")
 
-# 指令：播放音樂
 @bot.command()
 async def play(ctx, *, search: str):
     queue.append(search)
-    if not ctx.voice_client.is_playing():
+    if not ctx.voice_client or not ctx.voice_client.is_playing():
         await play_next(ctx)
 
-# 指令：下一首
 @bot.command()
 async def skip(ctx):
     if ctx.voice_client and ctx.voice_client.is_playing():
         ctx.voice_client.stop()
 
-# 指令：暫停
 @bot.command()
 async def pause(ctx):
     if ctx.voice_client and ctx.voice_client.is_playing():
         await ctx.voice_client.pause()
 
-# 指令：繼續
 @bot.command()
 async def resume(ctx):
     if ctx.voice_client and ctx.voice_client.is_paused():
         await ctx.voice_client.resume()
 
-# 指令：循環播放
 @bot.command()
 async def loop(ctx):
     global looping
     looping = not looping
     await ctx.send(f"循環播放 {'開啟' if looping else '關閉'}")
 
-# 指令：隨機播放
 @bot.command()
 async def shuffle(ctx):
     random.shuffle(queue)
     await ctx.send("播放清單已隨機排序 🎲")
 
-# 指令：目前播放
 @bot.command()
 async def now(ctx):
     await ctx.send(f"目前播放：{queue[0]}" if queue else "目前沒有播放歌曲。")
 
-# 指令：清除清單
 @bot.command()
 async def stop(ctx):
     queue.clear()
@@ -107,24 +97,38 @@ async def stop(ctx):
         ctx.voice_client.stop()
     await ctx.send("已停止播放並清空播放清單。")
 
-# 撥放下一首
 async def play_next(ctx):
     if not queue:
         return
 
     search = queue[0]
     vc = ctx.voice_client
+    if not vc or not vc.is_connected():
+        await ctx.send("❗ 我還沒加入語音頻道，請先輸入 `!join`")
+        return
 
-    with YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(search, download=False)
-        if 'entries' in info:
-            info = info['entries'][0]
-        url = info['url']
-        title = info.get('title', '未知歌曲')
+    try:
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(search, download=False)
+            if 'entries' in info:
+                info = info['entries'][0]
+            url = info['url']
+            title = info.get('title', '未知歌曲')
+    except Exception as e:
+        await ctx.send(f"❗ 音樂取得失敗：{e}")
+        queue.pop(0)
+        return
 
-    source = await discord.FFmpegOpusAudio.from_probe(url)
-    
+    ffmpeg_options = {
+        'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+        'options': '-vn'
+    }
+
+    source = discord.FFmpegPCMAudio(url, **ffmpeg_options)
+
     def after_playing(err):
+        if err:
+            print(f"播放中斷錯誤：{err}")
         if not looping:
             queue.pop(0)
         fut = asyncio.run_coroutine_threadsafe(play_next(ctx), bot.loop)
@@ -136,7 +140,6 @@ async def play_next(ctx):
     vc.play(source, after=after_playing)
     await ctx.send(f"🎶 正在播放：**{title}**")
 
-# 啟動機器人
 @bot.event
 async def on_ready():
     print(f"機器人上線：{bot.user}")
