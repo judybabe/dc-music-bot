@@ -117,6 +117,7 @@ async def play_next(ctx):
         'quiet': True,
         'default_search': 'ytsearch',
         'noplaylist': True,
+        'cookiefile': 'cookies.txt',
     }
 
     try:
