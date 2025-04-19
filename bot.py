@@ -5,10 +5,8 @@ from yt_dlp import YoutubeDL
 import asyncio
 from dotenv import load_dotenv
 import random
-<<<<<<< HEAD
-=======
 import os.path
->>>>>>> b2a3c20 (youtube cookies)
+
 
 # 假 Web server for Render port binding
 from threading import Thread
