@@ -32,11 +32,10 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 queue = []
 looping = False
 
-<<<<<<< HEAD
-=======
+
 if not os.path.exists("cookies.txt"):
     print("⚠️ 找不到 cookies.txt，YouTube 播放可能會失敗。請確認已正確上傳。")
->>>>>>> b2a3c20 (youtube cookies)
+
 # YouTube 撥放設定（含 cookies.txt）
 ydl_opts = {
     'format': 'bestaudio',
